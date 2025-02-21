@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h1>Dashboard</h1>
+    <p>Bem-vindo, {{ user.username }}!</p>
+
+    <div class="mt-4">
+        <form method="GET" action="{% url 'dashboard' %}" class="d-flex mb-4">
+            <input type="text" name="search" value="{{ search_query }}" class="form-control me-2" placeholder="Pesquisar por nome ou RFID">
+            <button type="submit" class="btn btn-primary">Pesquisar</button>
+        </form>
+        
+        <a href="{% url 'bem_create' %}" class="btn btn-primary">Cadastrar Novo Bem</a>
+        <a href="{% url 'categoria_list' %}" class="btn btn-secondary">Gerenciar Categorias</a>
+        <a href="{% url 'departamento_create' %}" class="btn btn-secondary">Cadastrar Departamentos</a>
+        <a href="{% url 'fornecedor_create' %}" class="btn btn-secondary">Cadastrar Fornecedor</a>
+        <a href="{% url 'bem_list' %}" class="btn btn-info">Atualizar Bem Existente</a>
+    </div>
+
+    <!-- Informações Gerais -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card my-4">
+                <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
+                    <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3">
+                        <h6 class="text-white text-capitalize ps-3">Informações Gerais</h6>
+                    </div>
+                </div>
+                <div class="card-body px-0 pb-2">
+                    <table class="table align-items-center mb-0">
+                        <thead>
+                            <tr>
+                                <th>Total de Ativos</th>
+                                <th>Valor Total do Patrimônio</th>
+                                <th>Ativos em Manutenção</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>{{ total_ativos }}</td>
+                                <td>R$ {{ valor_total_patrimonio }}</td>
+                                <td>{{ ativos_em_manutencao }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exibir Resultados da Pesquisa -->
+    {% if search_query %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <h5>Resultados da Pesquisa para: "{{ search_query }}"</h5>
+            {% if ativos %}
+            <table class="table align-items-center mb-0">
+                <thead>
+                    <tr>
+                        <th>Nome do Ativo</th>
+                        <th>RFID</th>
+                        <th>Valor de Aquisição</th>
+                        <th>Em Manutenção?</th> 
+                        <!-- Adicione outros campos conforme necessário -->
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ativo in ativos %}
+                    <tr>
+                        <td>{{ ativo.nome }}</td>
+                        <td>{{ ativo.rfid_tag }}</td>
+                        <td>R$ {{ ativo.valor_aquisicao }}</td>
+                        <td>{{ ativo.status }}</td>
+                        <!-- Adicione outros campos conforme necessário -->
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>Nenhum ativo encontrado.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Gráficos -->
+    <div class="row">
+        <!-- Gráfico de Ativos por Categoria -->
+        <div class="col-md-6">
+            <div class="card my-4">
+                <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
+                    <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3">
+                        <h6 class="text-white text-capitalize ps-3">Ativos por Categoria</h6>
+                    </div>
+                </div>
+                <div class="card-body px-0 pb-2">
+                    <canvas id="ativosPorCategoria" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico de Ativos por Departamento -->
+        <div class="col-md-6">
+            <div class="card my-4">
+                <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
+                    <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3">
+                        <h6 class="text-white text-capitalize ps-3">Ativos por Departamento</h6>
+                    </div>
+                </div>
+                <div class="card-body px-0 pb-2">
+                    <canvas id="ativosPorDepartamento" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Inclua a biblioteca Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// Dados do gráfico de Ativos por Categoria
+const categoriasData = {
+    labels: {{ labels_categorias|safe }},
+    datasets: [{
+        label: 'Número de Ativos',
+        data: {{ data_categorias|safe }},
+        backgroundColor: [
+            'rgba(255, 99, 132, 0.2)',
+            'rgba(54, 162, 235, 0.2)',
+            'rgba(255, 206, 86, 0.2)',
+            'rgba(75, 192, 192, 0.2)',
+            'rgba(153, 102, 255, 0.2)',
+            'rgba(255, 159, 64, 0.2)'
+        ],
+        borderColor: [
+            'rgba(255, 99, 132, 1)',
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(153, 102, 255, 1)',
+            'rgba(255, 159, 64, 1)'
+        ],
+        borderWidth: 1
+    }]
+};
+
+// Dados do gráfico de Ativos por Departamento
+const departamentosData = {
+    labels: {{ labels_departamentos|safe }},
+    datasets: [{
+        label: 'Número de Ativos',
+        data: {{ data_departamentos|safe }},
+        backgroundColor: [
+            'rgba(54, 162, 235, 0.2)',
+            'rgba(255, 206, 86', 
+             // Adicione mais cores conforme necessário
+             ],
+         borderColor: [
+             // Adicione as cores correspondentes conforme necessário
+         ],
+         borderWidth: 1
+     }]
+};
+
+// Criação do gráfico de Ativos por Categoria
+const categoriasCtx = document.getElementById('ativosPorCategoria').getContext('2d');
+const categoriasChart = new Chart(categoriasCtx, {
+     type: 'pie', // ou outro tipo como 'bar', 'line'
+     data: categoriasData,
+});
+
+// Criação do gráfico de Ativos por Departamento
+const departamentosCtx = document.getElementById('ativosPorDepartamento').getContext('2d');
+const departamentosChart = new Chart(departamentosCtx, {
+     type: 'bar',
+     data: departamentosData,
+});
+</script>
+
+
+
+{% endblock %}

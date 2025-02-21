@@ -1,0 +1,12 @@
+{# departamentos/departamento_confirm_delete.html #}
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Confirmar Exclusão</h1>
+    <p>Tem certeza que deseja excluir o departamento "{{ departamento.nome }}"?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Confirmar</button>
+    </form>
+    <a href="{% url 'departamento_list' %}">Cancelar</a>
+{% endblock %}
