@@ -31,16 +31,29 @@ class Fornecedor(models.Model):
     def __str__(self):
         return self.nome
 
+class Instituicao(models.Model):
+    nome = models.CharField(max_length=255, unique=True)
+    descricao = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.nome
+
 class Bem(models.Model):
+    STATUS_CHOICES = [
+        ('Ativo', 'Ativo'),
+        ('Em Manutenção', 'Em Manutenção'),
+        
+    ]
     nome = models.CharField(max_length=140)
     descricao = models.TextField(blank=True, null=True)
     categoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, null=True)
     departamento = models.ForeignKey(Departamento, on_delete=models.SET_NULL, null=True)
     fornecedor = models.ForeignKey(Fornecedor, on_delete=models.SET_NULL, null=True)
+    instituicao = models.ForeignKey(Instituicao, on_delete=models.SET_NULL, null=True)  # Nova relação com Instituicao
     data_aquisicao = models.DateField()
     valor_aquisicao = models.DecimalField(max_digits=10, decimal_places=2)
     rfid_tag = models.CharField(max_length=255, unique=True, blank=True, null=True)
-    status = models.CharField(max_length=50, default='Ativo')  # Ativo, Em Manutenção, Descartado
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Ativo')  # Ativo, Em Manutenção, Descartado
 
     def __str__(self):
         return self.nome

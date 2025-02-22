@@ -1,5 +1,5 @@
-{# bens/bem_form.html #}
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
 <div class="container mt-5">
@@ -8,6 +8,7 @@
             <h1 class="card-title text-center mb-4">Formulário de Bem</h1>
             <form method="post" class="needs-validation" novalidate>
                 {% csrf_token %}
+                <!-- Campo Nome -->
                 <div class="mb-3">
                     <label for="id_nome" class="form-label">Nome</label>
                     {{ form.nome }}
@@ -15,6 +16,8 @@
                         Por favor, insira um nome válido.
                     </div>
                 </div>
+
+                <!-- Campo Descrição -->
                 <div class="mb-3">
                     <label for="id_descricao" class="form-label">Descrição</label>
                     {{ form.descricao }}
@@ -22,6 +25,8 @@
                         Por favor, insira uma descrição válida.
                     </div>
                 </div>
+
+                <!-- Campo Categoria -->
                 <div class="mb-3">
                     <label for="id_categoria" class="form-label">Categoria</label>
                     {{ form.categoria }}
@@ -29,6 +34,8 @@
                         Por favor, selecione uma categoria válida.
                     </div>
                 </div>
+
+                <!-- Campo Departamento -->
                 <div class="mb-3">
                     <label for="id_departamento" class="form-label">Departamento</label>
                     {{ form.departamento }}
@@ -36,6 +43,8 @@
                         Por favor, selecione um departamento válido.
                     </div>
                 </div>
+
+                <!-- Campo Fornecedor -->
                 <div class="mb-3">
                     <label for="id_fornecedor" class="form-label">Fornecedor</label>
                     {{ form.fornecedor }}
@@ -43,6 +52,17 @@
                         Por favor, selecione um fornecedor válido.
                     </div>
                 </div>
+
+                <!-- Campo Instituição -->
+                <div class="mb-3">
+                    <label for="id_instituicao" class="form-label">Instituição</label>
+                    {{ form.instituicao }}
+                    <div class="invalid-feedback">
+                        Por favor, selecione uma instituição válida.
+                    </div>
+                </div>
+
+                <!-- Campo Data de Aquisição -->
                 <div class="mb-3">
                     <label for="id_data_aquisicao" class="form-label">Data de Aquisição</label>
                     {{ form.data_aquisicao }}
@@ -50,6 +70,8 @@
                         Por favor, insira uma data válida.
                     </div>
                 </div>
+
+                <!-- Campo Valor de Aquisição -->
                 <div class="mb-3">
                     <label for="id_valor_aquisicao" class="form-label">Valor de Aquisição</label>
                     {{ form.valor_aquisicao }}
@@ -57,13 +79,22 @@
                         Por favor, insira um valor válido.
                     </div>
                 </div>
+
+                <!-- Campo RFID Tag -->
                 <div class="mb-3">
                     <label for="id_rfid_tag" class="form-label">RFID Tag</label>
-                    {{ form.rfid_tag }}
+                    <div class="input-group">
+                        {{ form.rfid_tag }}
+                        <button type="button" id="ler-rfid-btn" class="btn btn-primary">
+                            <i class="fas fa-rss"></i> Ler RFID
+                        </button>
+                    </div>
                     <div class="invalid-feedback">
                         Por favor, insira uma RFID tag válida.
                     </div>
                 </div>
+
+                <!-- Campo Status -->
                 <div class="mb-3">
                     <label for="id_status" class="form-label">Status</label>
                     {{ form.status }}
@@ -71,6 +102,8 @@
                         Por favor, selecione um status válido.
                     </div>
                 </div>
+
+                <!-- Botões de Ação -->
                 <div class="d-flex justify-content-between align-items-center mt-4">
                     <button type="submit" class="btn btn-success">
                         <i class="fas fa-save"></i> Salvar
@@ -87,6 +120,31 @@
 <!-- Adicionando Font Awesome para ícones -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 
+<!-- Script para leitura RFID -->
+<script>
+document.getElementById('ler-rfid-btn').addEventListener('click', function() {
+    fetch("{% url 'ler_tag_rfid' %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            document.getElementById('id_rfid_tag').value = data.tag_id;
+        } else {
+            alert('Erro ao ler a tag RFID: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Erro ao conectar com o servidor: ' + error.message);
+    });
+});
+</script>
+
+<!-- Estilos Personalizados -->
 <style>
     body {
         background: #f8f9fa;
@@ -131,8 +189,8 @@
     }
 </style>
 
+<!-- Validação de Formulário com Bootstrap -->
 <script>
-// Validação de formulário com Bootstrap
 (function () {
     'use strict'
 
@@ -153,4 +211,5 @@
         })
 })()
 </script>
+
 {% endblock %}

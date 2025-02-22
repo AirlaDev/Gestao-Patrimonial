@@ -1,7 +1,8 @@
 import json
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from .models import Bem, Categoria, Departamento, Fornecedor, Movimentacao
+from django.urls import reverse
+from .models import Bem, Categoria, Departamento, Fornecedor, Instituicao, Movimentacao
 from .forms import BemForm, CategoriaForm, DepartamentoForm, FornecedorForm, MovimentacaoForm, UserRegisterForm
 from django.db.models import Count, Sum
 from django.contrib.auth.forms import AuthenticationForm
@@ -25,7 +26,10 @@ from .forms import BemForm
 from .models import Bem
 from django.contrib import messages
 from django.db.models import Count, Q
-
+from .forms import BemForm, CategoriaForm, DepartamentoForm, FornecedorForm, MovimentacaoForm, InstituicaoForm
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import subprocess
 
 def login_view(request):
     if request.method == 'POST':
@@ -38,31 +42,53 @@ def login_view(request):
         form = AuthenticationForm()
     return render(request, 'login.html', {'form': form})
 
-@login_required
-def dashboard(request):
-    # Captura o termo de pesquisa
-    search_query = request.GET.get('search', '')
 
-    # Filtra os ativos com base no termo de pesquisa (nome ou rfid_tag)
+def dashboard(request):
+    # Captura o termo de pesquisa e o filtro de instituição
+    search_query = request.GET.get('search', '')
+    instituicao_filtro = request.GET.get('instituicao', '')
+
+    # Filtra os ativos com base no termo de pesquisa (nome ou rfid_tag) e instituição
+    ativos = Bem.objects.all()
     if search_query:
-        ativos = Bem.objects.filter(Q(nome__icontains=search_query) | Q(rfid_tag__icontains=search_query))
-    else:
-        ativos = Bem.objects.all()
+        ativos = ativos.filter(Q(nome__icontains=search_query) | Q(rfid_tag__icontains=search_query))
+    if instituicao_filtro:
+        ativos = ativos.filter(instituicao_id=instituicao_filtro)
 
     # Dados para exibição geral
     total_ativos = ativos.count()
     valor_total_patrimonio = sum([bem.valor_aquisicao for bem in ativos])
-    ativos_em_manutencao = ativos.filter(status='em_manutencao').count()
+    ativos_em_manutencao = ativos.filter(status='Em Manutenção').count()
 
-    # Dados para o gráfico de Ativos por Categoria
+    # Dados para os gráficos
     categorias = Categoria.objects.annotate(num_ativos=Count('bem'))
     labels_categorias = [categoria.nome for categoria in categorias]
     data_categorias = [categoria.num_ativos for categoria in categorias]
 
-    # Dados para o gráfico de Ativos por Departamento
     departamentos = Departamento.objects.annotate(num_ativos=Count('bem'))
     labels_departamentos = [departamento.nome for departamento in departamentos]
     data_departamentos = [departamento.num_ativos for departamento in departamentos]
+
+    instituicoes = Instituicao.objects.annotate(num_ativos=Count('bem'))
+    labels_instituicoes = [instituicao.nome for instituicao in instituicoes]
+    data_instituicoes = [instituicao.num_ativos for instituicao in instituicoes]
+
+    # Dados para o gráfico de status por instituição
+    status_por_instituicao = []
+    for instituicao in instituicoes:
+        ativos_instituicao = ativos.filter(instituicao=instituicao)
+        ativos_ativos = ativos_instituicao.filter(status='Ativo').count()
+        ativos_manutencao = ativos_instituicao.filter(status='Em Manutenção').count()
+        status_por_instituicao.append({
+            'instituicao': instituicao.nome,
+            'ativos': ativos_ativos,
+            'manutencao': ativos_manutencao
+        })
+
+    # Extrair labels e dados para o gráfico de status por instituição
+    status_labels = [item['instituicao'] for item in status_por_instituicao]
+    status_ativos = [item['ativos'] for item in status_por_instituicao]
+    status_manutencao = [item['manutencao'] for item in status_por_instituicao]
 
     context = {
         'total_ativos': total_ativos,
@@ -72,8 +98,16 @@ def dashboard(request):
         'data_categorias': data_categorias,
         'labels_departamentos': labels_departamentos,
         'data_departamentos': data_departamentos,
-        'ativos': ativos,  # Passa os ativos filtrados para o template
-        'search_query': search_query,  # Passa o termo de pesquisa para o template
+        'labels_instituicoes': labels_instituicoes,
+        'data_instituicoes': data_instituicoes,
+        'instituicoes': instituicoes,
+        'instituicao_filtro': int(instituicao_filtro) if instituicao_filtro else '',
+        'ativos': ativos,
+        'search_query': search_query,
+        'status_por_instituicao': status_por_instituicao,
+        'status_labels': status_labels,
+        'status_ativos': status_ativos,
+        'status_manutencao': status_manutencao,
     }
 
     return render(request, 'dashboard.html', context)
@@ -88,18 +122,13 @@ def register_view(request):
         form = UserRegisterForm(request.POST)
         if form.is_valid():
             user = form.save()  # Salva o usuário
-            username = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password')
-            user = authenticate(request, username=username, password=password)  # Passa o request para authenticate
-            
-            if user is not None:
-                login(request, user)  # Faz o login automático após o registro
-                messages.success(request, f'Usuário {username} cadastrado com sucesso!')  # Mensagem de sucesso
-                return redirect('dashboard')  # Redireciona para o dashboard após o cadastro
-            else:
-                messages.error(request, 'Erro ao autenticar o usuário após o cadastro.')  # Mensagem de erro
+            login(request, user)  # Faz o login diretamente após o registro
+            messages.success(request, f'Usuário {user.username} cadastrado com sucesso!')
+            return redirect('dashboard')
         else:
-            messages.error(request, 'Erro ao cadastrar o usuário. Verifique os dados.')  # Mensagem de erro
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
     else:
         form = UserRegisterForm()
     return render(request, 'register.html', {'form': form})
@@ -116,7 +145,13 @@ def bem_create(request):
         form = BemForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Bem cadastrado com sucesso!')
             return redirect('bem_list')
+        else:
+            # Exibe erros do formulário
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
     else:
         form = BemForm()
     return render(request, 'bens/bem_form.html', {'form': form})
@@ -319,10 +354,80 @@ def ler_tag_rfid(request):
     error_message = None
 
     try:
+        # Tenta abrir a porta serial e ler a tag RFID
         ser = serial.Serial(PORT, BAUDRATE)
-        tag_id = ser.readline().decode('utf-8').strip()
-        ser.close()
+        tag_id = ser.readline().decode('utf-8').strip()  # Lê a tag e remove espaços em branco
+        ser.close()  # Fecha a porta serial
     except serial.SerialException as e:
-        error_message = f'Erro ao ler a tag rfid: {e}'
+        # Se houver um erro, captura a mensagem
+        error_message = f'Erro ao ler a tag RFID: {e}'
 
-    return render(request, 'bens/ler_tag_rfid.html', {'tag_id': tag_id, 'error_message': error_message})
+    # Redireciona para a página de pesquisa com o valor da tag
+    if tag_id:
+        return redirect(f"{reverse('dashboard')}?search={tag_id}")
+    else:
+        messages.error(request, error_message or 'Erro ao ler a tag RFID.')
+        return redirect('dashboard')
+    
+# CRUD para Instituições
+@login_required
+def instituicao_list(request):
+    instituicoes = Instituicao.objects.all()
+    return render(request, 'instituicoes/instituicao_list.html', {'instituicoes': instituicoes})
+
+@login_required
+def instituicao_create(request):
+    if request.method == 'POST':
+        form = InstituicaoForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('instituicao_list')
+    else:
+        form = InstituicaoForm()
+    return render(request, 'instituicoes/instituicao_form.html', {'form': form})
+
+@login_required
+def instituicao_update(request, pk):
+    instituicao = get_object_or_404(Instituicao, pk=pk)
+    if request.method == 'POST':
+        form = InstituicaoForm(request.POST, instance=instituicao)
+        if form.is_valid():
+            form.save()
+            return redirect('instituicao_list')
+    else:
+        form = InstituicaoForm(instance=instituicao)
+    return render(request, 'instituicoes/instituicao_form.html', {'form': form})
+
+@login_required
+def instituicao_delete(request, pk):
+    instituicao = get_object_or_404(Instituicao, pk=pk)
+    if request.method == 'POST':
+        instituicao.delete()
+        return redirect('instituicao_list')
+    return render(request, 'instituicoes/instituicao_confirm_delete.html', {'instituicao': instituicao})
+
+@csrf_exempt
+def ler_tag_rfid_view(request):
+    if request.method == 'POST':
+        try:
+            tag_id, tag_text = ler_tag_rfid()
+            if tag_id and tag_text:
+                return JsonResponse({
+                    'status': 'success',
+                    'tag_id': tag_id,
+                    'tag_text': tag_text
+                })
+            else:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Erro ao ler a tag RFID. Tente novamente.'
+                }, status=500)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            }, status=500)
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Método não permitido'
+    }, status=405)

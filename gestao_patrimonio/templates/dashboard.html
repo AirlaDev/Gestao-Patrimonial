@@ -7,15 +7,26 @@
     <p>Bem-vindo, {{ user.username }}!</p>
 
     <div class="mt-4">
+        <!-- Formulário de Pesquisa com Filtro de Instituição -->
         <form method="GET" action="{% url 'dashboard' %}" class="d-flex mb-4">
             <input type="text" name="search" value="{{ search_query }}" class="form-control me-2" placeholder="Pesquisar por nome ou RFID">
+            <select name="instituicao" class="form-control me-2">
+                <option value="">Todas as Instituições</option>
+                {% for instituicao in instituicoes %}
+                    <option value="{{ instituicao.id }}" {% if instituicao.id == instituicao_filtro %}selected{% endif %}>
+                        {{ instituicao.nome }}
+                    </option>
+                {% endfor %}
+            </select>
             <button type="submit" class="btn btn-primary">Pesquisar</button>
         </form>
         
+        <!-- Botões de Ação -->
         <a href="{% url 'bem_create' %}" class="btn btn-primary">Cadastrar Novo Bem</a>
         <a href="{% url 'categoria_list' %}" class="btn btn-secondary">Gerenciar Categorias</a>
         <a href="{% url 'departamento_create' %}" class="btn btn-secondary">Cadastrar Departamentos</a>
         <a href="{% url 'fornecedor_create' %}" class="btn btn-secondary">Cadastrar Fornecedor</a>
+        <a href="{% url 'instituicao_create' %}" class="btn btn-secondary">Cadastrar Instituição</a>
         <a href="{% url 'bem_list' %}" class="btn btn-info">Atualizar Bem Existente</a>
     </div>
 
@@ -51,10 +62,10 @@
     </div>
 
     <!-- Exibir Resultados da Pesquisa -->
-    {% if search_query %}
+    {% if search_query or instituicao_filtro %}
     <div class="row mb-4">
         <div class="col-12">
-            <h5>Resultados da Pesquisa para: "{{ search_query }}"</h5>
+            <h5>Resultados da Pesquisa:</h5>
             {% if ativos %}
             <table class="table align-items-center mb-0">
                 <thead>
@@ -62,8 +73,8 @@
                         <th>Nome do Ativo</th>
                         <th>RFID</th>
                         <th>Valor de Aquisição</th>
-                        <th>Em Manutenção?</th> 
-                        <!-- Adicione outros campos conforme necessário -->
+                        <th>Status</th>
+                        <th>Instituição</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -73,7 +84,7 @@
                         <td>{{ ativo.rfid_tag }}</td>
                         <td>R$ {{ ativo.valor_aquisicao }}</td>
                         <td>{{ ativo.status }}</td>
-                        <!-- Adicione outros campos conforme necessário -->
+                        <td>{{ ativo.instituicao.nome }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -114,8 +125,35 @@
                 </div>
             </div>
         </div>
-    </div>
 
+        <!-- Gráfico de Ativos por Instituição -->
+        <div class="col-md-6">
+            <div class="card my-4">
+                <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
+                    <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3">
+                        <h6 class="text-white text-capitalize ps-3">Ativos por Instituição</h6>
+                    </div>
+                </div>
+                <div class="card-body px-0 pb-2">
+                    <canvas id="ativosPorInstituicao" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico de Status por Instituição -->
+        <div class="col-md-6">
+            <div class="card my-4">
+                <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
+                    <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3">
+                        <h6 class="text-white text-capitalize ps-3">Status dos Ativos por Instituição</h6>
+                    </div>
+                </div>
+                <div class="card-body px-0 pb-2">
+                    <canvas id="statusPorInstituicao" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Inclua a biblioteca Chart.js -->
@@ -156,31 +194,134 @@ const departamentosData = {
         data: {{ data_departamentos|safe }},
         backgroundColor: [
             'rgba(54, 162, 235, 0.2)',
-            'rgba(255, 206, 86', 
-             // Adicione mais cores conforme necessário
-             ],
-         borderColor: [
-             // Adicione as cores correspondentes conforme necessário
-         ],
-         borderWidth: 1
-     }]
+            'rgba(255, 206, 86, 0.2)',
+            'rgba(75, 192, 192, 0.2)',
+            'rgba(153, 102, 255, 0.2)',
+            'rgba(255, 159, 64, 0.2)',
+            'rgba(255, 99, 132, 0.2)'
+        ],
+        borderColor: [
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(153, 102, 255, 1)',
+            'rgba(255, 159, 64, 1)',
+            'rgba(255, 99, 132, 1)'
+        ],
+        borderWidth: 1
+    }]
 };
 
-// Criação do gráfico de Ativos por Categoria
+// Dados do gráfico de Ativos por Instituição
+const instituicoesData = {
+    labels: {{ labels_instituicoes|safe }},
+    datasets: [{
+        label: 'Número de Ativos',
+        data: {{ data_instituicoes|safe }},
+        backgroundColor: [
+            'rgba(75, 192, 192, 0.2)',
+            'rgba(153, 102, 255, 0.2)',
+            'rgba(255, 159, 64, 0.2)',
+            'rgba(54, 162, 235, 0.2)',
+            'rgba(255, 99, 132, 0.2)',
+            'rgba(255, 206, 86, 0.2)'
+        ],
+        borderColor: [
+            'rgba(75, 192, 192, 1)',
+            'rgba(153, 102, 255, 1)',
+            'rgba(255, 159, 64, 1)',
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 99, 132, 1)',
+            'rgba(255, 206, 86, 1)'
+        ],
+        borderWidth: 1
+    }]
+};
+
+// Dados do gráfico de Status por Instituição
+const statusPorInstituicaoData = {
+    labels: {{ status_labels|safe }},
+    datasets: [
+        {
+            label: 'Ativos',
+            data: {{ status_ativos|safe }},
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+        },
+        {
+            label: 'Em Manutenção',
+            data: {{ status_manutencao|safe }},
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+        }
+    ]
+};
+
+// Criação dos gráficos
 const categoriasCtx = document.getElementById('ativosPorCategoria').getContext('2d');
-const categoriasChart = new Chart(categoriasCtx, {
-     type: 'pie', // ou outro tipo como 'bar', 'line'
-     data: categoriasData,
+new Chart(categoriasCtx, {
+    type: 'pie',
+    data: categoriasData,
+    options: {
+        plugins: {
+            title: {
+                display: true,
+                text: 'Distribuição de Ativos por Categoria',
+                font: { size: 16 }
+            }
+        }
+    }
 });
 
-// Criação do gráfico de Ativos por Departamento
 const departamentosCtx = document.getElementById('ativosPorDepartamento').getContext('2d');
-const departamentosChart = new Chart(departamentosCtx, {
-     type: 'bar',
-     data: departamentosData,
+new Chart(departamentosCtx, {
+    type: 'bar',
+    data: departamentosData,
+    options: {
+        plugins: {
+            title: {
+                display: true,
+                text: 'Distribuição de Ativos por Departamento',
+                font: { size: 16 }
+            }
+        },
+        scales: { y: { beginAtZero: true } }
+    }
+});
+
+const instituicoesCtx = document.getElementById('ativosPorInstituicao').getContext('2d');
+new Chart(instituicoesCtx, {
+    type: 'bar',
+    data: instituicoesData,
+    options: {
+        plugins: {
+            title: {
+                display: true,
+                text: 'Distribuição de Ativos por Instituição',
+                font: { size: 16 }
+            }
+        },
+        scales: { y: { beginAtZero: true } }
+    }
+});
+
+const statusPorInstituicaoCtx = document.getElementById('statusPorInstituicao').getContext('2d');
+new Chart(statusPorInstituicaoCtx, {
+    type: 'bar',
+    data: statusPorInstituicaoData,
+    options: {
+        plugins: {
+            title: {
+                display: true,
+                text: 'Status dos Ativos por Instituição',
+                font: { size: 16 }
+            }
+        },
+        scales: { y: { beginAtZero: true } }
+    }
 });
 </script>
-
-
 
 {% endblock %}

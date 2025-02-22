@@ -27,10 +27,15 @@ urlpatterns = [
     path('fornecedores/create/', views.fornecedor_create, name='fornecedor_create'),
     path('fornecedores/update/<int:pk>/', views.fornecedor_update, name='fornecedor_update'),
     path('fornecedores/delete/<int:pk>/', views.fornecedor_delete, name='fornecedor_delete'),
+    path('instituicoes/', views.instituicao_list, name='instituicao_list'),
+    path('instituicoes/create/', views.instituicao_create, name='instituicao_create'),
+    path('instituicoes/update/<int:pk>/', views.instituicao_update, name='instituicao_update'),
+    path('instituicoes/delete/<int:pk>/', views.instituicao_delete, name='instituicao_delete'),
     path('movimentacoes/', views.movimentacao_list, name='movimentacao_list'),
     path('movimentacoes/create/', views.movimentacao_create, name='movimentacao_create'),
     path('movimentacoes/update/<int:pk>/', views.movimentacao_update, name='movimentacao_update'),
     path('movimentacoes/delete/<int:pk>/', views.movimentacao_delete, name='movimentacao_delete'),
+    path('ler_tag_rfid/', views.ler_tag_rfid, name='ler_tag_rfid'),
 
 
     path('password_reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),

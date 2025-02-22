@@ -16,6 +16,9 @@
                 <tr>
                     <th scope="col">Nome</th>
                     <th scope="col">Categoria</th>
+                    <th scope="col">Instituição</th>
+                    <th scope="col">RFID</th> <!-- Nova coluna para RFID -->
+                    <th scope="col">Status</th> <!-- Nova coluna para Status -->
                     <th scope="col">Ações</th>
                 </tr>
             </thead>
@@ -24,6 +27,9 @@
                 <tr>
                     <td>{{ bem.nome }}</td>
                     <td>{{ bem.categoria }}</td>
+                    <td>{{ bem.instituicao.nome }}</td>
+                    <td>{{ bem.rfid_tag }}</td> <!-- Exibe o RFID -->
+                    <td>{{ bem.status }}</td> <!-- Exibe o Status -->
                     <td>
                         <a href="{% url 'bem_update' bem.pk %}" class="btn btn-sm btn-primary" title="Editar">
                             <i class="fas fa-edit"></i>
@@ -35,7 +41,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="3" class="text-center">Nenhum bem cadastrado.</td>
+                    <td colspan="6" class="text-center">Nenhum bem cadastrado.</td> <!-- Ajuste o colspan para 6 -->
                 </tr>
                 {% endfor %}
             </tbody>
@@ -82,4 +88,9 @@
         background-color: #f1f1f1;
     }
 </style>
+<div class="text-center mt-4">
+    <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Voltar
+    </a>
+</div>
 {% endblock %}

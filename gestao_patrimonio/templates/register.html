@@ -7,34 +7,7 @@
             <h2 class="card-title text-center mb-4">Cadastro</h2>
             <form method="post" class="needs-validation" novalidate>
                 {% csrf_token %}
-                <div class="mb-3">
-                    <label for="id_username" class="form-label">Nome de Usuário</label>
-                    <input type="text" name="username" id="id_username" class="form-control" required>
-                    <div class="invalid-feedback">
-                        Por favor, insira um nome de usuário válido.
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label for="id_email" class="form-label">E-mail</label>
-                    <input type="email" name="email" id="id_email" class="form-control" required>
-                    <div class="invalid-feedback">
-                        Por favor, insira um e-mail válido.
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label for="id_password1" class="form-label">Senha</label>
-                    <input type="password" name="password1" id="id_password1" class="form-control" required>
-                    <div class="invalid-feedback">
-                        Por favor, insira uma senha.
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label for="id_password2" class="form-label">Confirme a Senha</label>
-                    <input type="password" name="password2" id="id_password2" class="form-control" required>
-                    <div class="invalid-feedback">
-                        As senhas devem ser iguais.
-                    </div>
-                </div>
+                {{ form.as_p }}  <!-- Renderiza o formulário Django -->
                 <button type="submit" class="btn btn-primary w-100 mt-3">Registrar</button>
             </form>
             <div class="text-center mt-4">
@@ -48,11 +21,7 @@
 // Validação de formulário com Bootstrap
 (function () {
     'use strict'
-
-    // Seleciona todos os formulários que precisam de validação
     var forms = document.querySelectorAll('.needs-validation')
-
-    // Itera sobre os formulários e previne o envio se houver campos inválidos
     Array.prototype.slice.call(forms)
         .forEach(function (form) {
             form.addEventListener('submit', function (event) {
@@ -60,7 +29,6 @@
                     event.preventDefault()
                     event.stopPropagation()
                 }
-
                 form.classList.add('was-validated')
             }, false)
         })
@@ -78,12 +46,12 @@
         background: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(10px);
     }
-    .btn-success {
+    .btn-primary {
         background-color: #4caf50;
         border: none;
         transition: background-color 0.3s ease;
     }
-    .btn-success:hover {
+    .btn-primary:hover {
         background-color: #43a047;
     }
     .form-control {
@@ -102,5 +70,5 @@
     .was-validated .form-control:invalid ~ .invalid-feedback {
         display: block;
     }
-    
+</style>
 {% endblock %}
